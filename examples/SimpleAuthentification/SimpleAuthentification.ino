@@ -1,11 +1,17 @@
+#ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#else
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#endif
 
 const char* ssid = "........";
 const char* password = "........";
 
-ESP8266WebServer server(80);
+WebServer server(80);
 
 //Check if header is present and correct
 bool is_authentified(){
@@ -69,7 +75,7 @@ void handleRoot(){
     server.send(301);
     return;
   }
-  String content = "<html><body><H2>hello, you successfully connected to esp8266!</H2><br>";
+  String content = "<html><body><H2>hello, you successfully connected to esp8266/esp32!</H2><br>";
   if (server.hasHeader("User-Agent")){
     content += "the user agent used is : " + server.header("User-Agent") + "<br><br>";
   }

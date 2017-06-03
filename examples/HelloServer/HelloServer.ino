@@ -1,18 +1,33 @@
+#ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#else
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+#endif
 
 const char* ssid = "........";
 const char* password = "........";
 
-ESP8266WebServer server(80);
+WebServer server(80);
 
+#ifdef LED_BUILTIN
+const int led = LED_BUILTIN;
+#else
 const int led = 13;
+#endif
 
 void handleRoot() {
   digitalWrite(led, 1);
+#ifdef ESP8266
   server.send(200, "text/plain", "hello from esp8266!");
+#else
+  server.send(200, "text/plain", "hello from esp32!");
+#endif
   digitalWrite(led, 0);
 }
 
@@ -51,7 +66,11 @@ void setup(void){
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+#ifdef ESP8266
   if (MDNS.begin("esp8266")) {
+#else
+  if (MDNS.begin("esp32")) {
+#endif
     Serial.println("MDNS responder started");
   }
 

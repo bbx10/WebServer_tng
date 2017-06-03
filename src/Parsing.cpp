@@ -22,7 +22,7 @@
 #include <Arduino.h>
 #include "WiFiServer.h"
 #include "WiFiClient.h"
-#include "ESP8266WebServer.h"
+#include "WebServer.h"
 
 //#define DEBUG_ESP_HTTP_SERVER
 #ifdef DEBUG_ESP_PORT
@@ -63,7 +63,7 @@ static char* readBytesWithTimeout(WiFiClient& client, size_t maxLength, size_t& 
   return buf;
 }
 
-bool ESP8266WebServer::_parseRequest(WiFiClient& client) {
+bool WebServer::_parseRequest(WiFiClient& client) {
   // Read the first line of HTTP request
   String req = client.readStringUntil('\r');
   client.readStringUntil('\n');
@@ -255,7 +255,7 @@ bool ESP8266WebServer::_parseRequest(WiFiClient& client) {
   return true;
 }
 
-bool ESP8266WebServer::_collectHeader(const char* headerName, const char* headerValue) {
+bool WebServer::_collectHeader(const char* headerName, const char* headerValue) {
   for (int i = 0; i < _headerKeysCount; i++) {
     if (_currentHeaders[i].key.equalsIgnoreCase(headerName)) {
             _currentHeaders[i].value=headerValue;
@@ -265,7 +265,7 @@ bool ESP8266WebServer::_collectHeader(const char* headerName, const char* header
   return false;
 }
 
-void ESP8266WebServer::_parseArguments(String data) {
+void WebServer::_parseArguments(String data) {
 #ifdef DEBUG_ESP_HTTP_SERVER
   DEBUG_OUTPUT.print("args: ");
   DEBUG_OUTPUT.println(data);
@@ -340,7 +340,7 @@ void ESP8266WebServer::_parseArguments(String data) {
 
 }
 
-void ESP8266WebServer::_uploadWriteByte(uint8_t b){
+void WebServer::_uploadWriteByte(uint8_t b){
   if (_currentUpload.currentSize == HTTP_UPLOAD_BUFLEN){
     if(_currentHandler && _currentHandler->canUpload(_currentUri))
       _currentHandler->upload(*this, _currentUri, _currentUpload);
@@ -350,7 +350,7 @@ void ESP8266WebServer::_uploadWriteByte(uint8_t b){
   _currentUpload.buf[_currentUpload.currentSize++] = b;
 }
 
-uint8_t ESP8266WebServer::_uploadReadByte(WiFiClient& client){
+uint8_t WebServer::_uploadReadByte(WiFiClient& client){
   int res = client.read();
   if(res == -1){
     while(!client.available() && client.connected())
@@ -360,7 +360,7 @@ uint8_t ESP8266WebServer::_uploadReadByte(WiFiClient& client){
   return (uint8_t)res;
 }
 
-bool ESP8266WebServer::_parseForm(WiFiClient& client, String boundary, uint32_t len){
+bool WebServer::_parseForm(WiFiClient& client, String boundary, uint32_t len){
   (void) len;
 #ifdef DEBUG_ESP_HTTP_SERVER
   DEBUG_OUTPUT.print("Parse Form: Boundary: ");
@@ -568,7 +568,7 @@ readfile:
   return false;
 }
 
-String ESP8266WebServer::urlDecode(const String& text)
+String WebServer::urlDecode(const String& text)
 {
 	String decoded = "";
 	char temp[] = "0x00";
@@ -599,7 +599,7 @@ String ESP8266WebServer::urlDecode(const String& text)
 	return decoded;
 }
 
-bool ESP8266WebServer::_parseFormUploadAborted(){
+bool WebServer::_parseFormUploadAborted(){
   _currentUpload.status = UPLOAD_FILE_ABORTED;
   if(_currentHandler && _currentHandler->canUpload(_currentUri))
     _currentHandler->upload(*this, _currentUri, _currentUpload);

@@ -28,17 +28,28 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#else
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+#endif
 
 const char *ssid = "YourSSIDHere";
 const char *password = "YourPSKHere";
 
-ESP8266WebServer server ( 80 );
+WebServer server ( 80 );
 
+#ifdef LED_BUILTIN
+const int led = LED_BUILTIN;
+#else
 const int led = 13;
+#endif
 
 void handleRoot() {
 	digitalWrite ( led, 1 );
@@ -52,13 +63,13 @@ void handleRoot() {
 "<html>\
   <head>\
     <meta http-equiv='refresh' content='5'/>\
-    <title>ESP8266 Demo</title>\
+    <title>ESP8266/ESP32 Demo</title>\
     <style>\
       body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
     </style>\
   </head>\
   <body>\
-    <h1>Hello from ESP8266!</h1>\
+    <h1>Hello from ESP8266/ESP32!</h1>\
     <p>Uptime: %02d:%02d:%02d</p>\
     <img src=\"/test.svg\" />\
   </body>\
@@ -108,7 +119,11 @@ void setup ( void ) {
 	Serial.print ( "IP address: " );
 	Serial.println ( WiFi.localIP() );
 
+#ifdef ESP8266
 	if ( MDNS.begin ( "esp8266" ) ) {
+#else
+	if ( MDNS.begin ( "esp32" ) ) {
+#endif
 		Serial.println ( "MDNS responder started" );
 	}
 

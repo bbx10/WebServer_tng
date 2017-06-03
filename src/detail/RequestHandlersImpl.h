@@ -5,7 +5,7 @@
 
 class FunctionRequestHandler : public RequestHandler {
 public:
-    FunctionRequestHandler(ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn, const String &uri, HTTPMethod method)
+    FunctionRequestHandler(WebServer::THandlerFunction fn, WebServer::THandlerFunction ufn, const String &uri, HTTPMethod method)
     : _fn(fn)
     , _ufn(ufn)
     , _uri(uri)
@@ -30,7 +30,7 @@ public:
         return true;
     }
 
-    bool handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) override {
+    bool handle(WebServer& server, HTTPMethod requestMethod, String requestUri) override {
         (void) server;
         if (!canHandle(requestMethod, requestUri))
             return false;
@@ -39,7 +39,7 @@ public:
         return true;
     }
 
-    void upload(ESP8266WebServer& server, String requestUri, HTTPUpload& upload) override {
+    void upload(WebServer& server, String requestUri, HTTPUpload& upload) override {
         (void) server;
         (void) upload;
         if (canUpload(requestUri))
@@ -47,8 +47,8 @@ public:
     }
 
 protected:
-    ESP8266WebServer::THandlerFunction _fn;
-    ESP8266WebServer::THandlerFunction _ufn;
+    WebServer::THandlerFunction _fn;
+    WebServer::THandlerFunction _ufn;
     String _uri;
     HTTPMethod _method;
 };
@@ -62,7 +62,13 @@ public:
     , _cache_header(cache_header)
     {
         _isFile = fs.exists(path);
+#ifdef ESP8266
         DEBUGV("StaticRequestHandler: path=%s uri=%s isFile=%d, cache_header=%s\r\n", path, uri, _isFile, cache_header);
+#else
+#ifdef DEBUG_ESP_HTTP_SERVER
+        DEBUG_OUTPUT.printf("StaticRequestHandler: path=%s uri=%s isFile=%d, cache_header=%s\r\n", path, uri, _isFile, cache_header);
+#endif
+#endif
         _baseUriLength = _uri.length();
     }
 
@@ -76,11 +82,17 @@ public:
         return true;
     }
 
-    bool handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) override {
+    bool handle(WebServer& server, HTTPMethod requestMethod, String requestUri) override {
         if (!canHandle(requestMethod, requestUri))
             return false;
 
+#ifdef ESP8266
         DEBUGV("StaticRequestHandler::handle: request=%s _uri=%s\r\n", requestUri.c_str(), _uri.c_str());
+#else
+#ifdef DEBUG_ESP_HTTP_SERVER
+        DEBUG_OUTPUT.printf("StaticRequestHandler::handle: request=%s _uri=%s\r\n", requestUri.c_str(), _uri.c_str());
+#endif
+#endif
 
         String path(_path);
 
@@ -92,7 +104,13 @@ public:
             // Append whatever follows this URI in request to get the file path.
             path += requestUri.substring(_baseUriLength);
         }
+#ifdef ESP8266
         DEBUGV("StaticRequestHandler::handle: path=%s, isFile=%d\r\n", path.c_str(), _isFile);
+#else
+#ifdef DEBUG_ESP_HTTP_SERVER
+        DEBUG_OUTPUT.printf("StaticRequestHandler::handle: path=%s, isFile=%d\r\n", path.c_str(), _isFile);
+#endif
+#endif
 
         String contentType = getContentType(path);
 

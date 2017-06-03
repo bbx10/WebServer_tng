@@ -1,15 +1,22 @@
+#ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
 #include <ESP8266WebServer.h>
+#else
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#include <ArduinoOTA.h>
+#include <WebServer.h>
+#endif
 
 const char* ssid = "........";
 const char* password = "........";
 
-ESP8266WebServer server(80);
+WebServer server(80);
 
 const char* www_username = "admin";
-const char* www_password = "esp8266";
+const char* www_password = "esp8266esp32";
 
 void setup() {
   Serial.begin(115200);

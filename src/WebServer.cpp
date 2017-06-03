@@ -1,5 +1,5 @@
 /*
-  ESP8266WebServer.cpp - Dead simple web-server.
+  WebServer.cpp - Dead simple web-server.
   Supports only one simultaneous client, knows how to handle GET and POST.
 
   Copyright (c) 2014 Ivan Grokhotkov. All rights reserved.
@@ -25,7 +25,7 @@
 #include <libb64/cencode.h>
 #include "WiFiServer.h"
 #include "WiFiClient.h"
-#include "ESP8266WebServer.h"
+#include "WebServer.h"
 #include "FS.h"
 #include "detail/RequestHandlersImpl.h"
 
@@ -38,7 +38,7 @@
 
 const char * AUTHORIZATION_HEADER = "Authorization";
 
-ESP8266WebServer::ESP8266WebServer(IPAddress addr, int port)
+WebServer::WebServer(IPAddress addr, int port)
 : _server(addr, port)
 , _currentMethod(HTTP_ANY)
 , _currentVersion(0)
@@ -56,7 +56,7 @@ ESP8266WebServer::ESP8266WebServer(IPAddress addr, int port)
 {
 }
 
-ESP8266WebServer::ESP8266WebServer(int port)
+WebServer::WebServer(int port)
 : _server(port)
 , _currentMethod(HTTP_ANY)
 , _currentVersion(0)
@@ -74,7 +74,7 @@ ESP8266WebServer::ESP8266WebServer(int port)
 {
 }
 
-ESP8266WebServer::~ESP8266WebServer() {
+WebServer::~WebServer() {
   if (_currentHeaders)
     delete[]_currentHeaders;
   _headerKeysCount = 0;
@@ -87,14 +87,14 @@ ESP8266WebServer::~ESP8266WebServer() {
   close();
 }
 
-void ESP8266WebServer::begin() {
+void WebServer::begin() {
   _currentStatus = HC_NONE;
   _server.begin();
   if(!_headerKeysCount)
     collectHeaders(0, 0);
 }
 
-bool ESP8266WebServer::authenticate(const char * username, const char * password){
+bool WebServer::authenticate(const char * username, const char * password){
   if(hasHeader(AUTHORIZATION_HEADER)){
     String authReq = header(AUTHORIZATION_HEADER);
     if(authReq.startsWith("Basic")){
@@ -127,28 +127,28 @@ bool ESP8266WebServer::authenticate(const char * username, const char * password
   return false;
 }
 
-void ESP8266WebServer::requestAuthentication(){
+void WebServer::requestAuthentication(){
   sendHeader("WWW-Authenticate", "Basic realm=\"Login Required\"");
   send(401);
 }
 
-void ESP8266WebServer::on(const String &uri, ESP8266WebServer::THandlerFunction handler) {
+void WebServer::on(const String &uri, WebServer::THandlerFunction handler) {
   on(uri, HTTP_ANY, handler);
 }
 
-void ESP8266WebServer::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn) {
+void WebServer::on(const String &uri, HTTPMethod method, WebServer::THandlerFunction fn) {
   on(uri, method, fn, _fileUploadHandler);
 }
 
-void ESP8266WebServer::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction fn, ESP8266WebServer::THandlerFunction ufn) {
+void WebServer::on(const String &uri, HTTPMethod method, WebServer::THandlerFunction fn, WebServer::THandlerFunction ufn) {
   _addRequestHandler(new FunctionRequestHandler(fn, ufn, uri, method));
 }
 
-void ESP8266WebServer::addHandler(RequestHandler* handler) {
+void WebServer::addHandler(RequestHandler* handler) {
     _addRequestHandler(handler);
 }
 
-void ESP8266WebServer::_addRequestHandler(RequestHandler* handler) {
+void WebServer::_addRequestHandler(RequestHandler* handler) {
     if (!_lastHandler) {
       _firstHandler = handler;
       _lastHandler = handler;
@@ -159,11 +159,11 @@ void ESP8266WebServer::_addRequestHandler(RequestHandler* handler) {
     }
 }
 
-void ESP8266WebServer::serveStatic(const char* uri, FS& fs, const char* path, const char* cache_header) {
+void WebServer::serveStatic(const char* uri, FS& fs, const char* path, const char* cache_header) {
     _addRequestHandler(new StaticRequestHandler(fs, path, uri, cache_header));
 }
 
-void ESP8266WebServer::handleClient() {
+void WebServer::handleClient() {
   if (_currentStatus == HC_NONE) {
     WiFiClient client = _server.available();
     if (!client) {
@@ -227,15 +227,20 @@ void ESP8266WebServer::handleClient() {
   }
 }
 
-void ESP8266WebServer::close() {
-  _server.close();
+void WebServer::close() {
+#ifdef ESP8266
+  _server.stop();
+#else
+  // TODO add ESP32 WiFiServer::stop()
+  _server.end();
+#endif
 }
 
-void ESP8266WebServer::stop() {
+void WebServer::stop() {
   close();
 }
 
-void ESP8266WebServer::sendHeader(const String& name, const String& value, bool first) {
+void WebServer::sendHeader(const String& name, const String& value, bool first) {
   String headerLine = name;
   headerLine += ": ";
   headerLine += value;
@@ -249,11 +254,11 @@ void ESP8266WebServer::sendHeader(const String& name, const String& value, bool 
   }
 }
 
-void ESP8266WebServer::setContentLength(size_t contentLength) {
+void WebServer::setContentLength(size_t contentLength) {
     _contentLength = contentLength;
 }
 
-void ESP8266WebServer::_prepareHeader(String& response, int code, const char* content_type, size_t contentLength) {
+void WebServer::_prepareHeader(String& response, int code, const char* content_type, size_t contentLength) {
     response = "HTTP/1."+String(_currentVersion)+" ";
     response += String(code);
     response += " ";
@@ -281,7 +286,7 @@ void ESP8266WebServer::_prepareHeader(String& response, int code, const char* co
     _responseHeaders = String();
 }
 
-void ESP8266WebServer::send(int code, const char* content_type, const String& content) {
+void WebServer::send(int code, const char* content_type, const String& content) {
     String header;
     // Can we asume the following?
     //if(code == 200 && content.length() == 0 && _contentLength == CONTENT_LENGTH_NOT_SET)
@@ -292,7 +297,7 @@ void ESP8266WebServer::send(int code, const char* content_type, const String& co
       sendContent(content);
 }
 
-void ESP8266WebServer::send_P(int code, PGM_P content_type, PGM_P content) {
+void WebServer::send_P(int code, PGM_P content_type, PGM_P content) {
     size_t contentLength = 0;
 
     if (content != NULL) {
@@ -307,7 +312,7 @@ void ESP8266WebServer::send_P(int code, PGM_P content_type, PGM_P content) {
     sendContent_P(content);
 }
 
-void ESP8266WebServer::send_P(int code, PGM_P content_type, PGM_P content, size_t contentLength) {
+void WebServer::send_P(int code, PGM_P content_type, PGM_P content, size_t contentLength) {
     String header;
     char type[64];
     memccpy_P((void*)type, (PGM_VOID_P)content_type, 0, sizeof(type));
@@ -316,15 +321,15 @@ void ESP8266WebServer::send_P(int code, PGM_P content_type, PGM_P content, size_
     sendContent_P(content, contentLength);
 }
 
-void ESP8266WebServer::send(int code, char* content_type, const String& content) {
+void WebServer::send(int code, char* content_type, const String& content) {
   send(code, (const char*)content_type, content);
 }
 
-void ESP8266WebServer::send(int code, const String& content_type, const String& content) {
+void WebServer::send(int code, const String& content_type, const String& content) {
   send(code, (const char*)content_type.c_str(), content);
 }
 
-void ESP8266WebServer::sendContent(const String& content) {
+void WebServer::sendContent(const String& content) {
   const char * footer = "\r\n";
   size_t len = content.length();
   if(_chunked) {
@@ -341,11 +346,11 @@ void ESP8266WebServer::sendContent(const String& content) {
   }
 }
 
-void ESP8266WebServer::sendContent_P(PGM_P content) {
+void WebServer::sendContent_P(PGM_P content) {
   sendContent_P(content, strlen_P(content));
 }
 
-void ESP8266WebServer::sendContent_P(PGM_P content, size_t size) {
+void WebServer::sendContent_P(PGM_P content, size_t size) {
   const char * footer = "\r\n";
   if(_chunked) {
     char * chunkSize = (char *)malloc(11);
@@ -362,7 +367,7 @@ void ESP8266WebServer::sendContent_P(PGM_P content, size_t size) {
 }
 
 
-String ESP8266WebServer::arg(String name) {
+String WebServer::arg(String name) {
   for (int i = 0; i < _currentArgCount; ++i) {
     if ( _currentArgs[i].key == name )
       return _currentArgs[i].value;
@@ -370,23 +375,23 @@ String ESP8266WebServer::arg(String name) {
   return String();
 }
 
-String ESP8266WebServer::arg(int i) {
+String WebServer::arg(int i) {
   if (i < _currentArgCount)
     return _currentArgs[i].value;
   return String();
 }
 
-String ESP8266WebServer::argName(int i) {
+String WebServer::argName(int i) {
   if (i < _currentArgCount)
     return _currentArgs[i].key;
   return String();
 }
 
-int ESP8266WebServer::args() {
+int WebServer::args() {
   return _currentArgCount;
 }
 
-bool ESP8266WebServer::hasArg(String  name) {
+bool WebServer::hasArg(String  name) {
   for (int i = 0; i < _currentArgCount; ++i) {
     if (_currentArgs[i].key == name)
       return true;
@@ -395,7 +400,7 @@ bool ESP8266WebServer::hasArg(String  name) {
 }
 
 
-String ESP8266WebServer::header(String name) {
+String WebServer::header(String name) {
   for (int i = 0; i < _headerKeysCount; ++i) {
     if (_currentHeaders[i].key.equalsIgnoreCase(name))
       return _currentHeaders[i].value;
@@ -403,7 +408,7 @@ String ESP8266WebServer::header(String name) {
   return String();
 }
 
-void ESP8266WebServer::collectHeaders(const char* headerKeys[], const size_t headerKeysCount) {
+void WebServer::collectHeaders(const char* headerKeys[], const size_t headerKeysCount) {
   _headerKeysCount = headerKeysCount + 1;
   if (_currentHeaders)
      delete[]_currentHeaders;
@@ -414,23 +419,23 @@ void ESP8266WebServer::collectHeaders(const char* headerKeys[], const size_t hea
   }
 }
 
-String ESP8266WebServer::header(int i) {
+String WebServer::header(int i) {
   if (i < _headerKeysCount)
     return _currentHeaders[i].value;
   return String();
 }
 
-String ESP8266WebServer::headerName(int i) {
+String WebServer::headerName(int i) {
   if (i < _headerKeysCount)
     return _currentHeaders[i].key;
   return String();
 }
 
-int ESP8266WebServer::headers() {
+int WebServer::headers() {
   return _headerKeysCount;
 }
 
-bool ESP8266WebServer::hasHeader(String name) {
+bool WebServer::hasHeader(String name) {
   for (int i = 0; i < _headerKeysCount; ++i) {
     if ((_currentHeaders[i].key.equalsIgnoreCase(name)) &&  (_currentHeaders[i].value.length() > 0))
       return true;
@@ -438,19 +443,19 @@ bool ESP8266WebServer::hasHeader(String name) {
   return false;
 }
 
-String ESP8266WebServer::hostHeader() {
+String WebServer::hostHeader() {
   return _hostHeader;
 }
 
-void ESP8266WebServer::onFileUpload(THandlerFunction fn) {
+void WebServer::onFileUpload(THandlerFunction fn) {
   _fileUploadHandler = fn;
 }
 
-void ESP8266WebServer::onNotFound(THandlerFunction fn) {
+void WebServer::onNotFound(THandlerFunction fn) {
   _notFoundHandler = fn;
 }
 
-void ESP8266WebServer::_handleRequest() {
+void WebServer::_handleRequest() {
   bool handled = false;
   if (!_currentHandler){
 #ifdef DEBUG_ESP_HTTP_SERVER
@@ -478,7 +483,7 @@ void ESP8266WebServer::_handleRequest() {
   _currentUri = String();
 }
 
-String ESP8266WebServer::_responseCodeToString(int code) {
+String WebServer::_responseCodeToString(int code) {
   switch (code) {
     case 100: return F("Continue");
     case 101: return F("Switching Protocols");

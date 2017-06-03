@@ -1,8 +1,8 @@
 /*
-  SDWebServer - Example WebServer with SD Card backend for esp8266
+  SDWebServer - Example WebServer with SD Card backend for esp8266/esp32
 
   Copyright (c) 2015 Hristo Gochkov. All rights reserved.
-  This file is part of the ESP8266WebServer library for Arduino environment.
+  This file is part of the ESP8266/ESP32 WebServer library for Arduino environment.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -27,12 +27,21 @@
   upload the contents of SdRoot to the root of the SDcard and access the editor by going to http://esp8266sd.local/edit
 
 */
+#ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <SPI.h>
 #include <SD.h>
+#else
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+#include <SPI.h>
+#include <SD.h>
+#endif
 
 #define DBG_OUTPUT_PORT Serial
 
@@ -40,7 +49,7 @@ const char* ssid = "**********";
 const char* password = "**********";
 const char* host = "esp8266sd";
 
-ESP8266WebServer server(80);
+WebServer server(80);
 
 static bool hasSD = false;
 File uploadFile;
@@ -155,7 +164,12 @@ void handleCreate(){
   if(path.indexOf('.') > 0){
     File file = SD.open((char *)path.c_str(), FILE_WRITE);
     if(file){
+#ifdef ESP8266
       file.write((const char *)0);
+#else
+      // TODO Create file with 0 bytes???
+      file.write(NULL, 0);
+#endif
       file.close();
     }
   } else {
