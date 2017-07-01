@@ -3,17 +3,17 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+ESP8266WebServer server(80);
 #else
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+WebServer server(80);
 #endif
 
 const char* ssid = "........";
 const char* password = "........";
-
-WebServer server(80);
 
 #ifdef LED_BUILTIN
 const int led = LED_BUILTIN;

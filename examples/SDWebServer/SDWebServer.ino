@@ -34,6 +34,7 @@
 #include <ESP8266mDNS.h>
 #include <SPI.h>
 #include <SD.h>
+ESP8266WebServer server(80);
 #else
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -41,6 +42,7 @@
 #include <ESPmDNS.h>
 #include <SPI.h>
 #include <SD.h>
+WebServer server(80);
 #endif
 
 #define DBG_OUTPUT_PORT Serial
@@ -48,8 +50,6 @@
 const char* ssid = "**********";
 const char* password = "**********";
 const char* host = "esp8266sd";
-
-WebServer server(80);
 
 static bool hasSD = false;
 File uploadFile;

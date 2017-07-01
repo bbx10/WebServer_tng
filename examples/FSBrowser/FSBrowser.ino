@@ -28,6 +28,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <FS.h>
+ESP8266WebServer server(80);
 #else
 #error No SPIFFS on ESP32
 #include <WiFi.h>
@@ -35,6 +36,7 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include <FS.h>
+WebServer server(80);
 #endif
 
 #define DBG_OUTPUT_PORT Serial
@@ -42,8 +44,6 @@
 const char* ssid = "wifi-ssid";
 const char* password = "wifi-password";
 const char* host = "esp8266fs";
-
-WebServer server(80);
 
 //holds the current upload
 File fsUploadFile;
