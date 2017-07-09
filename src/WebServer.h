@@ -132,6 +132,7 @@ public:
 
   static String urlDecode(const String& text);
 
+#ifdef ESP8266
 template<typename T> size_t streamFile(T &file, const String& contentType){
   setContentLength(file.size());
   if (String(file.name()).endsWith(".gz") &&
@@ -142,6 +143,47 @@ template<typename T> size_t streamFile(T &file, const String& contentType){
   send(200, contentType, "");
   return _currentClient.write(file);
 }
+#else
+template<typename T> size_t streamFile(T &file, const String& contentType){
+#define STREAMFILE_BUFSIZE 2*1460
+  setContentLength(file.size());
+  if (String(file.name()).endsWith(".gz") &&
+      contentType != "application/x-gzip" &&
+      contentType != "application/octet-stream") {
+    sendHeader("Content-Encoding", "gzip");
+  }
+  send(200, contentType, "");
+  uint8_t *buf = (uint8_t *)malloc(STREAMFILE_BUFSIZE);
+  if (buf == NULL) {
+    //DBG_OUTPUT_PORT.printf("streamFile malloc failed");
+    return 0;
+  }
+  size_t totalBytesOut = 0;
+  while (client().connected() && (file.available() > 0)) {
+    int bytesOut;
+    int bytesIn = file.read(buf, STREAMFILE_BUFSIZE);
+    if (bytesIn <= 0) break;
+    while (1) {
+      bytesOut = 0;
+      if (!client().connected()) break;
+      bytesOut = client().write(buf, bytesIn);
+      if (bytesIn == bytesOut) break;
+
+      //DBG_OUTPUT_PORT.printf("bytesIn %d != bytesOut %d\r\n",
+      //bytesIn, bytesOut);
+      delay(1);
+    }
+    totalBytesOut += bytesOut;
+    yield();
+  }
+  if (totalBytesOut != file.size()) {
+    //DBG_OUTPUT_PORT.printf("file size %d bytes out %d\r\n",
+    //    file.size(), totalBytesOut);
+  }
+  free(buf);
+  return totalBytesOut;
+}
+#endif
 
 protected:
   void _addRequestHandler(RequestHandler* handler);
