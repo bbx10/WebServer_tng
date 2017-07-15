@@ -206,7 +206,12 @@ void printDirectory() {
     output += "{\"type\":\"";
     output += (entry.isDirectory()) ? "dir" : "file";
     output += "\",\"name\":\"";
+#ifdef ESP8266
     output += entry.name();
+#else
+    // Ignore '/' prefix
+    output += entry.name()+1;
+#endif
     output += "\"";
     output += "}";
     server.sendContent(output);
