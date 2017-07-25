@@ -22,6 +22,15 @@
   access the sample web page at http://esp8266fs.local
   edit the page by going to http://esp8266fs.local/edit
 */
+/*
+ * Uploading html, css, javascript, etc.
+ * Use curl to upload the files from the SPIFFS data directory.
+ *  cd data/
+ *  curl -X POST -F "data=@index.htm"     http://<ESP32 IP address>/edit >/dev/null
+ *  curl -X POST -F "data=@graphs.js.gz"  http://<ESP32 IP address>/edit >/dev/null
+ *  curl -X POST -F "data=@favicon.ico"   http://<ESP32 IP address>/edit >/dev/null
+ *  curl -X POST -F "data=@edit.htm.gz"   http://<ESP32 IP address>/edit >/dev/null
+ */
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -30,12 +39,11 @@
 #include <FS.h>
 ESP8266WebServer server(80);
 #else
-#error No SPIFFS on ESP32
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
-#include <FS.h>
+#include <SPIFFS.h>
 WebServer server(80);
 #endif
 
@@ -145,8 +153,16 @@ void handleFileCreate(){
   path = String();
 }
 
+void returnFail(String msg) {
+  server.send(500, "text/plain", msg + "\r\n");
+}
+
+#ifdef ESP8266
 void handleFileList() {
-  if(!server.hasArg("dir")) {server.send(500, "text/plain", "BAD ARGS"); return;}
+  if(!server.hasArg("dir")) {
+    returnFail("BAD ARGS");
+    return;
+  }
   
   String path = server.arg("dir");
   DBG_OUTPUT_PORT.println("handleFileList: " + path);
@@ -169,6 +185,81 @@ void handleFileList() {
   output += "]";
   server.send(200, "text/json", output);
 }
+#else
+void handleFileList() {
+  if(!server.hasArg("dir")) {
+    returnFail("BAD ARGS");
+    return;
+  }
+  String path = server.arg("dir");
+  if(path != "/" && !SPIFFS.exists((char *)path.c_str())) {
+    returnFail("BAD PATH");
+    return;
+  }
+  File dir = SPIFFS.open((char *)path.c_str());
+  path = String();
+  if(!dir.isDirectory()){
+    dir.close();
+    returnFail("NOT DIR");
+    return;
+  }
+  dir.rewindDirectory();
+
+  String output = "[";
+  for (int cnt = 0; true; ++cnt) {
+    File entry = dir.openNextFile();
+    if (!entry)
+    break;
+
+    if (cnt > 0)
+      output += ',';
+
+    output += "{\"type\":\"";
+    output += (entry.isDirectory()) ? "dir" : "file";
+    output += "\",\"name\":\"";
+    // Ignore '/' prefix
+    output += entry.name()+1;
+    output += "\"";
+    output += "}";
+    entry.close();
+  }
+  output += "]";
+  server.send(200, "text/json", output);
+  dir.close();
+}
+
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
+  DBG_OUTPUT_PORT.printf("Listing directory: %s\n", dirname);
+
+  File root = fs.open(dirname);
+  if (!root) {
+    DBG_OUTPUT_PORT.println("Failed to open directory");
+    return;
+  }
+  if (!root.isDirectory()) {
+    DBG_OUTPUT_PORT.println("Not a directory");
+    return;
+  }
+
+  File file = root.openNextFile();
+  while (file) {
+    if (file.isDirectory()) {
+      DBG_OUTPUT_PORT.print("  DIR : ");
+      DBG_OUTPUT_PORT.println(file.name());
+      if (levels) {
+        listDir(fs, file.name(), levels - 1);
+      }
+    } else {
+      DBG_OUTPUT_PORT.print("  FILE: ");
+      DBG_OUTPUT_PORT.print(file.name());
+      DBG_OUTPUT_PORT.print("  SIZE: ");
+      DBG_OUTPUT_PORT.println(file.size());
+    }
+    file = root.openNextFile();
+  }
+}
+#endif
+
 
 void setup(void){
   DBG_OUTPUT_PORT.begin(115200);
@@ -176,12 +267,16 @@ void setup(void){
   DBG_OUTPUT_PORT.setDebugOutput(true);
   SPIFFS.begin();
   {
+#ifdef ESP8266
     Dir dir = SPIFFS.openDir("/");
     while (dir.next()) {    
       String fileName = dir.fileName();
       size_t fileSize = dir.fileSize();
       DBG_OUTPUT_PORT.printf("FS File: %s, size: %s\n", fileName.c_str(), formatBytes(fileSize).c_str());
     }
+#else
+    listDir(SPIFFS, "/", 0);
+#endif
     DBG_OUTPUT_PORT.printf("\n");
   }
   
@@ -233,7 +328,9 @@ void setup(void){
     String json = "{";
     json += "\"heap\":"+String(ESP.getFreeHeap());
     json += ", \"analog\":"+String(analogRead(A0));
+#ifdef ESP8266
     json += ", \"gpio\":"+String((uint32_t)(((GPI | GPO) & 0xFFFF) | ((GP16I & 0x01) << 16)));
+#endif
     json += "}";
     server.send(200, "text/json", json);
     json = String();
