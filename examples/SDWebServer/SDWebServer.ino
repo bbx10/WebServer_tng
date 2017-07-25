@@ -218,6 +218,8 @@ void printDirectory() {
     entry.close();
  }
  server.sendContent("]");
+ // Send zero length chunk to terminate the HTTP body
+ server.sendContent("");
  dir.close();
 }
 
@@ -252,7 +254,7 @@ void setup(void){
     delay(500);
   }
   if(i == 21){
-    DBG_OUTPUT_PORT.print("Could not connect to");
+    DBG_OUTPUT_PORT.print("Could not connect to ");
     DBG_OUTPUT_PORT.println(ssid);
     while(1) delay(500);
   }
