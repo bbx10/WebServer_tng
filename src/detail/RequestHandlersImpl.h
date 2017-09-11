@@ -3,8 +3,12 @@
 
 #include "RequestHandler.h"
 
+#ifdef ESP8266
 // Table of extension->MIME strings stored in PROGMEM, needs to be global due to GCC section typing rules
 static const struct {const char endsWith[16]; const char mimeType[32];} mimeTable[] ICACHE_RODATA_ATTR = {
+#else
+static const struct {const char endsWith[16]; const char mimeType[32];} mimeTable[] = {
+#endif
     { ".html", "text/html" },
     { ".htm", "text/html" },
     { ".css", "text/css" },
