@@ -280,6 +280,7 @@ void WebServer::_prepareHeader(String& response, int code, const char* content_t
       sendHeader("Transfer-Encoding","chunked");
     }
     sendHeader("Connection", "close");
+    sendHeader("Access-Control-Allow-Origin", "*");
 
     response += _responseHeaders;
     response += "\r\n";
